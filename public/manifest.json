@@ -1,0 +1,18 @@
+{
+  "name": "Transcriptor iPhone Pro",
+  "short_name": "Transcriptor",
+  "description": "Píldora Dynamic Island y Estudio de Voz para iPhone con Groq Whisper Large v3",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

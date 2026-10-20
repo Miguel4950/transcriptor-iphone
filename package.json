@@ -1,0 +1,9 @@
+{
+  "name": "transcriptor-iphone-pro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Transcriptor iPhone Pro — Dynamic Island, PiP Flotante y Atajo Nativo iOS con Groq Whisper Large v3",
+  "engines": {
+    "node": ">=18.x"
+  }
+}

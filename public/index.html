@@ -1,0 +1,2070 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Transcriptor" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+  <title>Transcriptor — iPhone Pro</title>
+  <style>
+    :root {
+      --bg-oled: #000000;
+      --card-bg: #0c0c0f;
+      --card-elevated: #141419;
+      --card-inner: #070709;
+      --border-subtle: rgba(255, 255, 255, 0.09);
+      --border-highlight: rgba(255, 255, 255, 0.18);
+      --text-white: #f5f5f7;
+      --text-muted: #8e8e93;
+      --text-dim: #58585e;
+      --ios-red: #ff3b30;
+      --ios-green: #30d158;
+      --ios-amber: #ff9f0a;
+      --ios-blue: #0a84ff;
+      --spring-bounce: cubic-bezier(0.22, 1.32, 0.36, 1);
+      --spring-smooth: cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100dvh;
+      background-color: var(--bg-oled);
+      color: var(--text-white);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* =====================================================
+       PÍLDORA DYNAMIC ISLAND (SUPERIOR Y ARRASTRABLE EN IPHONE)
+       ===================================================== */
+    .dynamic-island-dock {
+      position: sticky;
+      top: max(10px, env(safe-area-inset-top));
+      z-index: 9000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 4px 12px 0 12px;
+      pointer-events: none;
+    }
+
+    .dynamic-island-dock.floating-free {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      width: auto;
+      padding: 0;
+    }
+
+    .dynamic-island {
+      pointer-events: auto;
+      width: min(94vw, 410px);
+      height: 58px;
+      background: #040406;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      padding: 0 9px 0 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      box-shadow:
+        0 18px 42px rgba(0, 0, 0, 0.92),
+        0 0 0 1px rgba(0, 0, 0, 0.95),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      transition:
+        width 0.38s var(--spring-bounce),
+        height 0.34s var(--spring-bounce),
+        border-color 0.25s ease,
+        transform 0.25s var(--spring-bounce);
+      touch-action: none;
+    }
+
+    .dynamic-island.rec-active {
+      width: min(96vw, 430px);
+      border-color: rgba(255, 59, 48, 0.48);
+      box-shadow:
+        0 20px 48px rgba(0, 0, 0, 0.95),
+        0 0 24px rgba(255, 59, 48, 0.16);
+    }
+
+    .island-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      cursor: grab;
+      padding: 6px 0;
+    }
+
+    .orb-box {
+      position: relative;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .orb-halo {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--ios-red);
+      opacity: 0;
+    }
+
+    .orb-halo.pulsing {
+      animation: iosPulse 1.3s infinite ease-out;
+    }
+
+    @keyframes iosPulse {
+      0% { transform: scale(1); opacity: 0.7; }
+      100% { transform: scale(2.7); opacity: 0; }
+    }
+
+    .orb-dot {
+      position: relative;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ios-green);
+      transition: background-color 0.2s ease;
+    }
+
+    .island-meta {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .island-timer {
+      font-family: "SF Mono", ui-monospace, Menlo, monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-white);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .island-status {
+      font-size: 0.63rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      max-width: 72px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #miniWaveCanvas {
+      flex: 1;
+      height: 30px;
+      min-width: 54px;
+      display: block;
+      pointer-events: none;
+    }
+
+    .island-actions {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .pill-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.94rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.16s var(--spring-bounce), background-color 0.16s ease;
+    }
+
+    .pill-btn:active {
+      transform: scale(0.88);
+    }
+
+    .pill-btn-white {
+      background: var(--text-white);
+      color: var(--ios-red);
+    }
+
+    .pill-btn-red {
+      background: var(--ios-red);
+      color: #ffffff;
+    }
+
+    .pill-btn-dark {
+      background: #1a1a20;
+      color: var(--text-white);
+    }
+
+    .pill-btn-green {
+      background: var(--ios-green);
+      color: #000000;
+    }
+
+    .pill-copy-chip {
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+
+    .island-toast {
+      pointer-events: auto;
+      margin-top: 8px;
+      background: rgba(20, 20, 26, 0.96);
+      border: 1px solid var(--border-highlight);
+      border-radius: 14px;
+      padding: 8px 15px;
+      font-size: 0.79rem;
+      font-weight: 500;
+      color: var(--text-white);
+      max-width: 90vw;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.85);
+      opacity: 0;
+      transform: translateY(-6px) scale(0.95);
+      transition: opacity 0.22s ease, transform 0.26s var(--spring-bounce);
+    }
+
+    .island-toast.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    /* =====================================================
+       CONTENEDOR PRINCIPAL IPHONE PRO
+       ===================================================== */
+    .iphone-shell {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 12px 16px max(28px, env(safe-area-inset-bottom)) 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .top-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 4px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text-white);
+    }
+
+    .pro-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: #1c1c24;
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+      letter-spacing: 0.4px;
+    }
+
+    .btn-key-pill {
+      background: #141419;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 7px 13px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    /* Selector de Pestañas estilo iOS Segmented Control */
+    .ios-segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: #111116;
+      padding: 3px;
+      border-radius: 13px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .seg-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .seg-btn.active {
+      background: #24242c;
+      color: var(--text-white);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .tab-pane {
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .tab-pane.active {
+      display: flex;
+    }
+
+    /* Tarjetas iOS Pro */
+    .ios-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
+    }
+
+    .monitor-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .monitor-status-title {
+      font-size: 0.96rem;
+      font-weight: 600;
+      color: var(--text-white);
+    }
+
+    .monitor-status-sub {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .monitor-timer {
+      font-family: "SF Mono", ui-monospace, Menlo, monospace;
+      font-size: 1.85rem;
+      font-weight: 700;
+      letter-spacing: -0.6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .wave-box {
+      width: 100%;
+      height: 76px;
+      background: var(--card-inner);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 15px;
+      overflow: hidden;
+      padding: 4px 6px;
+    }
+
+    #mainWaveCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Botones principales para el pulgar en iPhone */
+    .thumb-controls {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 10px;
+    }
+
+    .btn-ios {
+      appearance: none;
+      -webkit-appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 17px;
+      padding: 15px 14px;
+      font-family: inherit;
+      font-size: 0.94rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      cursor: pointer;
+      transition: transform 0.16s var(--spring-bounce), background-color 0.16s ease, opacity 0.16s ease;
+    }
+
+    .btn-ios:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+
+    .btn-ios:disabled {
+      opacity: 0.4;
+    }
+
+    .btn-ios-white {
+      background: var(--text-white);
+      color: #000000;
+    }
+
+    .btn-ios-dark {
+      background: #191920;
+      color: var(--text-white);
+    }
+
+    .btn-ios-red {
+      background: var(--ios-red);
+      color: #ffffff;
+    }
+
+    .btn-ios-green {
+      background: var(--ios-green);
+      color: #000000;
+    }
+
+    /* Botón Destacado Picture-in-Picture (Flotar sobre WhatsApp en iPhone) */
+    .pip-banner-btn {
+      width: 100%;
+      background: linear-gradient(180deg, #17171f 0%, #101016 100%);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 16px;
+      padding: 12px 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-white);
+      cursor: pointer;
+      transition: transform 0.16s var(--spring-bounce), border-color 0.2s ease;
+    }
+
+    .pip-banner-btn:active {
+      transform: scale(0.97);
+    }
+
+    .pip-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      text-align: left;
+    }
+
+    .pip-icon-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: #23232e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
+      color: var(--text-white);
+      flex-shrink: 0;
+    }
+
+    .pip-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-white);
+    }
+
+    .pip-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* Cuadro de Transcripción */
+    .transcript-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 9px;
+    }
+
+    .transcript-label {
+      font-size: 0.73rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .btn-mini-clear {
+      background: #18181f;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 4px 11px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    #txtResult {
+      width: 100%;
+      min-height: 155px;
+      background: var(--card-inner);
+      color: var(--text-white);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 14px;
+      padding: 13px;
+      font-family: inherit;
+      font-size: 1rem;
+      line-height: 1.54;
+      resize: none;
+      outline: none;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    #txtResult::placeholder {
+      color: var(--text-dim);
+    }
+
+    .copy-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* =====================================================
+       PESTAÑA 2: PÍLDORA NATIVA IOS (ATAJO + TOCAR ATRÁS 2 VECES)
+       ===================================================== */
+    .step-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(48, 209, 88, 0.15);
+      color: var(--ios-green);
+      margin-bottom: 6px;
+    }
+
+    .shortcut-recipe {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .recipe-block {
+      background: var(--card-inner);
+      border: 1px solid var(--border-subtle);
+      border-radius: 13px;
+      padding: 11px 13px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .recipe-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #252530;
+      color: var(--text-white);
+      font-size: 0.74rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .recipe-text {
+      font-size: 0.8rem;
+      line-height: 1.42;
+      color: var(--text-muted);
+    }
+
+    .recipe-text strong {
+      color: var(--text-white);
+    }
+
+    .magic-url-box {
+      width: 100%;
+      background: var(--card-inner);
+      border: 1px solid rgba(48, 209, 88, 0.35);
+      border-radius: 12px;
+      padding: 11px 12px;
+      color: var(--ios-green);
+      font-family: "SF Mono", ui-monospace, monospace;
+      font-size: 0.74rem;
+      margin: 8px 0 10px 0;
+      outline: none;
+    }
+
+    /* =====================================================
+       MODAL DE CLAVE API (CERO HARDCODE)
+       ===================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 410px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-highlight);
+      border-radius: 22px;
+      padding: 22px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9);
+    }
+
+    .modal-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .modal-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      margin-bottom: 12px;
+    }
+
+    .key-status {
+      font-size: 0.77rem;
+      padding: 10px 12px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      background: var(--card-inner);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+    }
+
+    .key-input {
+      width: 100%;
+      background: var(--card-inner);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 13px;
+      color: var(--text-white);
+      font-family: "SF Mono", ui-monospace, monospace;
+      font-size: 0.9rem;
+      margin-bottom: 14px;
+      outline: none;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =====================================================
+       PÍLDORA DYNAMIC ISLAND INTERACTIVA EN LA PARTE SUPERIOR
+       ===================================================== -->
+  <div class="dynamic-island-dock" id="islandDock">
+    <div class="dynamic-island" id="dynamicIsland">
+      <div class="island-left" id="pillDragHandle" title="Arrastra la píldora">
+        <div class="orb-box">
+          <span class="orb-halo" id="pillHalo"></span>
+          <span class="orb-dot" id="pillStatusDot"></span>
+        </div>
+        <div class="island-meta">
+          <span class="island-timer" id="lblPillTimer">00:00</span>
+          <span class="island-status" id="lblPillState">Listo</span>
+        </div>
+      </div>
+
+      <canvas id="miniWaveCanvas"></canvas>
+
+      <div class="island-actions">
+        <button class="pill-btn pill-btn-white" id="btnPillRecord" title="Grabar / Finalizar">●</button>
+        <button class="pill-btn pill-btn-dark" id="btnPillContinue" title="Seguir Grabando / Pausar">+</button>
+        <button class="pill-btn pill-btn-dark pill-copy-chip" id="btnPillCopy" title="Copiar todo">Copiar</button>
+        <button class="pill-btn pill-btn-dark" id="btnPillPip" title="Sacar Píldora Flotante sobre WhatsApp">⧉</button>
+      </div>
+    </div>
+
+    <div class="island-toast" id="islandToast"></div>
+  </div>
+
+  <!-- Lienzo Retina (720x220) y Video con pista de audio silenciosa para Picture-in-Picture real en iOS Safari -->
+  <canvas id="pipCanvas" width="720" height="220" style="position: fixed; left: -9999px; top: -9999px; pointer-events: none;"></canvas>
+  <video id="pipVideo" playsinline webkit-playsinline style="position: fixed; width: 2px; height: 2px; opacity: 0.01; left: -10px; bottom: -10px; pointer-events: none;"></video>
+
+  <!-- =====================================================
+       INTERFAZ PRINCIPAL IPHONE PRO
+       ===================================================== -->
+  <main class="iphone-shell">
+    <header class="top-header">
+      <div class="brand-group">
+        <span class="brand-badge">Transcriptor</span>
+        <span class="pro-tag">iPHONE PRO</span>
+      </div>
+      <button class="btn-key-pill" id="btnOpenSettings">
+        🔑 Clave: <span id="lblKeyState">...</span>
+      </button>
+    </header>
+
+    <!-- Selector de modo en iPhone -->
+    <div class="ios-segmented">
+      <button class="seg-btn active" id="tabBtnStudio">Estudio &amp; Píldora PiP</button>
+      <button class="seg-btn" id="tabBtnShortcut"> Píldora Nativa iOS</button>
+    </div>
+
+    <!-- =====================================================
+         PESTAÑA 1: ESTUDIO DE VOZ + PÍLDORA FLOTANTE PIP
+         ===================================================== -->
+    <div class="tab-pane active" id="paneStudio">
+      <section class="ios-card">
+        <div class="monitor-top">
+          <div>
+            <div class="monitor-status-title" id="statusTitleText">Listo para grabar</div>
+            <div class="monitor-status-sub" id="statusSubtitle">Corte automático cada 2 min • Whisper Large v3</div>
+          </div>
+          <div class="monitor-timer" id="lblMainTimer">00:00</div>
+        </div>
+
+        <div class="wave-box">
+          <canvas id="mainWaveCanvas"></canvas>
+        </div>
+      </section>
+
+      <!-- Botones principales para el pulgar -->
+      <section class="thumb-controls">
+        <button class="btn-ios btn-ios-white" id="btnMainRecord">
+          Empezar Grabación
+        </button>
+        <button class="btn-ios btn-ios-dark" id="btnMainContinue">
+          Seguir Grabando
+        </button>
+      </section>
+
+      <!-- Botón para sacar la Píldora Flotante encima de WhatsApp / otras apps -->
+      <button class="pip-banner-btn" id="btnLaunchPipBanner">
+        <div class="pip-banner-left">
+          <div class="pip-icon-badge">⧉</div>
+          <div>
+            <div class="pip-title">Flotar Píldora sobre WhatsApp (PiP)</div>
+            <div class="pip-desc">Saca la cápsula fuera de Safari mientras hablas en otras apps</div>
+          </div>
+        </div>
+        <span style="color: var(--text-muted); font-weight: 700;">↗</span>
+      </button>
+
+      <!-- Tarjeta de Transcripción y Copiado en 1 Toque -->
+      <section class="ios-card">
+        <div class="transcript-header">
+          <span class="transcript-label">TRANSCRIPCIÓN <span id="lblWordCount" style="font-weight: 500; color: var(--text-dim);">• 0 palabras</span></span>
+          <button class="btn-mini-clear" id="btnClearText">Limpiar</button>
+        </div>
+        <textarea id="txtResult" placeholder="Habla ahora... Tu texto transcrito por Whisper Large v3 aparecerá aquí listo para copiar."></textarea>
+      </section>
+
+      <section class="copy-row">
+        <button class="btn-ios btn-ios-white" id="btnMainCopy" style="flex: 1;">
+          Copiar al Portapapeles
+        </button>
+        <button class="btn-ios btn-ios-dark" id="btnShareIos" style="width: 56px; padding: 0;" title="Compartir en WhatsApp / Notas">
+          ↗
+        </button>
+      </section>
+    </div>
+
+    <!-- =====================================================
+         PESTAÑA 2: PÍLDORA NATIVA DE IPHONE (DYNAMIC ISLAND + TOCAR ATRÁS 2 VECES)
+         ===================================================== -->
+    <div class="tab-pane" id="paneShortcut">
+      <section class="ios-card">
+        <span class="step-badge">100% NATIVO EN IPHONE SIN ABRIR SAFARI</span>
+        <div class="monitor-status-title" style="margin-bottom: 6px;">
+          Usa la Dynamic Island real de tu iPhone encima de WhatsApp
+        </div>
+        <div class="monitor-status-sub" style="line-height: 1.45;">
+          Al conectarlo con la app <strong>Atajos (Shortcuts)</strong> de tu iPhone, solo tendrás que <strong>tocar 2 veces la manzana detrás de tu iPhone</strong> estando dentro de WhatsApp: saldrá la píldora nativa de iOS arriba, grabará tu voz y dejará el texto ya copiado en tu portapapeles para darle a <em>Pegar</em>.
+        </div>
+
+        <input type="text" class="magic-url-box" id="inputMagicUrl" readonly />
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn-ios btn-ios-green" id="btnCopyMagicUrl" style="flex: 1; padding: 12px; font-size: 0.84rem; border-radius: 13px;">
+            1. Copiar Tu Enlace Mágico
+          </button>
+          <a href="shortcuts://create-shortcut" class="btn-ios btn-ios-dark" style="padding: 12px 14px; font-size: 0.84rem; border-radius: 13px; text-decoration: none;">
+            2. Abrir Atajos ↗
+          </a>
+        </div>
+      </section>
+
+      <section class="ios-card">
+        <div class="monitor-status-title" style="font-size: 0.9rem; margin-bottom: 4px;">
+          Cómo armar el Atajo en 25 segundos (una sola vez):
+        </div>
+
+        <div class="shortcut-recipe">
+          <div class="recipe-block">
+            <div class="recipe-num">1</div>
+            <div class="recipe-text">
+              En la app <strong>Atajos</strong> de tu iPhone, toca <strong>+</strong> y agrega la acción <strong>Grabar audio</strong>.<br/>
+              <em>(En opciones pon: Iniciar grabación → <strong>Inmediatamente</strong>).</em>
+            </div>
+          </div>
+
+          <div class="recipe-block">
+            <div class="recipe-num">2</div>
+            <div class="recipe-text">
+              Agrega la acción <strong>Obtener contenido de URL</strong>:<br/>
+              • Pega tu <strong>Enlace Mágico</strong> copiado arriba.<br/>
+              • Método: <strong>POST</strong><br/>
+              • Cuerpo de solicitud: <strong>Archivo</strong> → elige la variable <strong>Audio grabado</strong>.
+            </div>
+          </div>
+
+          <div class="recipe-block">
+            <div class="recipe-num">3</div>
+            <div class="recipe-text">
+              Agrega la acción <strong>Copiar en el portapapeles</strong> (copiará automáticamente el texto devuelto por Whisper Large v3).
+            </div>
+          </div>
+
+          <div class="recipe-block">
+            <div class="recipe-num">★</div>
+            <div class="recipe-text">
+              <strong>Actívalo con 2 toques detrás del iPhone:</strong><br/>
+              Ve a <em>Ajustes → Accesibilidad → Tocar → Tocar atrás → Doble toque</em> y selecciona tu Atajo. ¡Listo para siempre!
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- =====================================================
+       MODAL DE CLAVE API (CERO HARDCODE)
+       ===================================================== -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-title">Clave API de Groq</div>
+      <div class="modal-desc">
+        Tu clave nunca se sube al código. Puedes configurar <code>GROQ_API_KEY</code> en Vercel o pegarla aquí una sola vez para guardarla en tu iPhone.
+      </div>
+      <div class="key-status" id="modalKeyBanner">Comprobando conexión...</div>
+      <input type="password" class="key-input" id="inputApiKey" placeholder="gsk_..." autocomplete="off" spellcheck="false" />
+      <div class="modal-actions">
+        <button class="btn-mini-clear" id="btnClearKey" style="padding: 9px 13px;">Borrar</button>
+        <button class="btn-mini-clear" id="btnCloseModal" style="padding: 9px 13px;">Cerrar</button>
+        <button class="btn-ios btn-ios-white" id="btnSaveKey" style="padding: 9px 18px; font-size: 0.84rem; border-radius: 999px;">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY_NAME = 'transcriptor_iphone_groq_key';
+    const STORAGE_TEXT_BACKUP = 'transcriptor_iphone_text_backup';
+    const TARGET_SAMPLE_RATE = 16000;
+    const CHUNK_SECONDS = 120; // 2 minutos exactos (~3.66 MB < 22 MB)
+    const CHUNK_MAX_SAMPLES = TARGET_SAMPLE_RATE * CHUNK_SECONDS;
+
+    let serverHasApiKey = false;
+    let isRecording = false;
+    let isPaused = false;
+    let isProcessing = false;
+    let appendMode = false;
+
+    let accumulatedMs = 0;
+    let lastResumeTimestamp = 0;
+    let timerInterval = null;
+    let toastTimeout = null;
+
+    let mediaStream = null;
+    let audioContext = null;
+    let mediaSource = null;
+    let processorNode = null;
+    let muteGainNode = null;
+
+    let currentPcmSamples = [];
+    let currentSamplesCount = 0;
+    let currentChunkIndex = 0;
+    let activeChunkPromises = [];
+    let currentAudioLevel = 0;
+    let maxSessionLevel = 0;
+    let currentChunkLevel = 0;
+    let baseTextBeforeSession = '';
+    let completedChunksMap = new Map();
+    let activeUploadsCount = 0;
+    const uploadWaitQueue = [];
+    let wakeLockSentinel = null;
+
+    // Elementos DOM
+    const islandDock = document.getElementById('islandDock');
+    const dynamicIsland = document.getElementById('dynamicIsland');
+    const pillHalo = document.getElementById('pillHalo');
+    const pillStatusDot = document.getElementById('pillStatusDot');
+    const lblPillTimer = document.getElementById('lblPillTimer');
+    const lblPillState = document.getElementById('lblPillState');
+    const islandToast = document.getElementById('islandToast');
+
+    const btnPillRecord = document.getElementById('btnPillRecord');
+    const btnPillContinue = document.getElementById('btnPillContinue');
+    const btnPillCopy = document.getElementById('btnPillCopy');
+    const btnPillPip = document.getElementById('btnPillPip');
+
+    const statusTitleText = document.getElementById('statusTitleText');
+    const statusSubtitle = document.getElementById('statusSubtitle');
+    const lblMainTimer = document.getElementById('lblMainTimer');
+    const lblWordCount = document.getElementById('lblWordCount');
+    const txtResult = document.getElementById('txtResult');
+
+    const btnMainRecord = document.getElementById('btnMainRecord');
+    const btnMainContinue = document.getElementById('btnMainContinue');
+    const btnMainCopy = document.getElementById('btnMainCopy');
+    const btnShareIos = document.getElementById('btnShareIos');
+    const btnClearText = document.getElementById('btnClearText');
+    const btnLaunchPipBanner = document.getElementById('btnLaunchPipBanner');
+
+    const tabBtnStudio = document.getElementById('tabBtnStudio');
+    const tabBtnShortcut = document.getElementById('tabBtnShortcut');
+    const paneStudio = document.getElementById('paneStudio');
+    const paneShortcut = document.getElementById('paneShortcut');
+    const inputMagicUrl = document.getElementById('inputMagicUrl');
+    const btnCopyMagicUrl = document.getElementById('btnCopyMagicUrl');
+
+    const settingsModal = document.getElementById('settingsModal');
+    const btnOpenSettings = document.getElementById('btnOpenSettings');
+    const btnCloseModal = document.getElementById('btnCloseModal');
+    const btnSaveKey = document.getElementById('btnSaveKey');
+    const btnClearKey = document.getElementById('btnClearKey');
+    const inputApiKey = document.getElementById('inputApiKey');
+    const modalKeyBanner = document.getElementById('modalKeyBanner');
+    const lblKeyState = document.getElementById('lblKeyState');
+
+    const mainCanvas = document.getElementById('mainWaveCanvas');
+    const miniCanvas = document.getElementById('miniWaveCanvas');
+    const pipCanvas = document.getElementById('pipCanvas');
+    const pipVideo = document.getElementById('pipVideo');
+
+    // Navegación entre pestañas iPhone
+    tabBtnStudio.addEventListener('click', () => {
+      tabBtnStudio.classList.add('active');
+      tabBtnShortcut.classList.remove('active');
+      paneStudio.classList.add('active');
+      paneShortcut.classList.remove('active');
+    });
+
+    tabBtnShortcut.addEventListener('click', () => {
+      tabBtnShortcut.classList.add('active');
+      tabBtnStudio.classList.remove('active');
+      paneShortcut.classList.add('active');
+      paneStudio.classList.remove('active');
+      refreshMagicUrlField();
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+
+    function getLocalApiKey() {
+      return (localStorage.getItem(STORAGE_KEY_NAME) || '').trim();
+    }
+
+    function refreshMagicUrlField() {
+      const origin = window.location.origin;
+      const localKey = getLocalApiKey();
+      inputMagicUrl.value = localKey
+        ? `${origin}/api/transcribe?format=text&key=${encodeURIComponent(localKey)}`
+        : `${origin}/api/transcribe?format=text`;
+    }
+
+    async function checkApiConnectionStatus() {
+      try {
+        const res = await fetch('/api/transcribe', { method: 'GET' });
+        if (res.ok) {
+          const data = await res.json();
+          serverHasApiKey = Boolean(data && data.hasServerKey);
+        }
+      } catch (e) {
+        serverHasApiKey = false;
+      }
+      updateKeyStatusUI();
+      refreshMagicUrlField();
+    }
+
+    function updateKeyStatusUI() {
+      const localKey = getLocalApiKey();
+      if (localKey) {
+        lblKeyState.textContent = 'Activa';
+        modalKeyBanner.textContent = '✓ Clave guardada en tu iPhone (' + localKey.slice(0, 7) + '...)';
+        modalKeyBanner.style.color = '#30d158';
+      } else if (serverHasApiKey) {
+        lblKeyState.textContent = 'Cloud';
+        modalKeyBanner.textContent = '✓ Conectado mediante GROQ_API_KEY en Vercel.';
+        modalKeyBanner.style.color = '#30d158';
+      } else {
+        lblKeyState.textContent = 'Configurar';
+        modalKeyBanner.textContent = 'Pega tu clave de Groq (gsk_...) abajo para guardarla en tu iPhone.';
+        modalKeyBanner.style.color = '#ff9f0a';
+      }
+    }
+
+    function openKeyModal() {
+      inputApiKey.value = getLocalApiKey();
+      updateKeyStatusUI();
+      settingsModal.classList.add('open');
+    }
+
+    btnOpenSettings.addEventListener('click', openKeyModal);
+    btnCloseModal.addEventListener('click', () => settingsModal.classList.remove('open'));
+
+    btnSaveKey.addEventListener('click', () => {
+      const val = inputApiKey.value.trim();
+      if (!val) return;
+      localStorage.setItem(STORAGE_KEY_NAME, val);
+      updateKeyStatusUI();
+      refreshMagicUrlField();
+      settingsModal.classList.remove('open');
+      showIslandToast('✓ Clave API guardada en tu iPhone');
+    });
+
+    btnClearKey.addEventListener('click', () => {
+      localStorage.removeItem(STORAGE_KEY_NAME);
+      inputApiKey.value = '';
+      updateKeyStatusUI();
+      refreshMagicUrlField();
+    });
+
+    btnCopyMagicUrl.addEventListener('click', async () => {
+      refreshMagicUrlField();
+      const url = inputMagicUrl.value;
+      let ok = await copyTextSilently(url);
+      if (!ok) {
+        inputMagicUrl.focus();
+        inputMagicUrl.select();
+        try { ok = document.execCommand('copy'); } catch (e) {}
+      }
+      if (ok) {
+        btnCopyMagicUrl.textContent = '✓ Enlace Mágico Copiado';
+        showIslandToast('✓ Enlace Mágico copiado al portapapeles');
+        setTimeout(() => {
+          btnCopyMagicUrl.textContent = '1. Copiar Tu Enlace Mágico';
+        }, 2200);
+      }
+    });
+
+    function showIslandToast(msg) {
+      islandToast.textContent = msg;
+      islandToast.classList.add('show');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        islandToast.classList.remove('show');
+      }, 3400);
+    }
+
+    islandToast.addEventListener('click', copyTextWithUserGesture);
+
+    // =====================================================
+    // MOTOR DE COLA Y PROTECCIÓN PARA GRABACIONES LARGAS
+    // =====================================================
+    function acquireUploadSlot() {
+      if (activeUploadsCount < 2) {
+        activeUploadsCount++;
+        return Promise.resolve();
+      }
+      return new Promise((resolve) => uploadWaitQueue.push(resolve));
+    }
+
+    function releaseUploadSlot() {
+      if (uploadWaitQueue.length > 0) {
+        const next = uploadWaitQueue.shift();
+        next();
+      } else {
+        activeUploadsCount = Math.max(0, activeUploadsCount - 1);
+      }
+    }
+
+    function isWhisperSilenceHallucination(text, chunkPeak) {
+      if (!text || !text.trim()) return true;
+      const t = text.trim();
+      if (chunkPeak < 0.055) {
+        if (/^(thank you\.?|thanks for watching!?|gracias\.?|muchas gracias\.?)$/i.test(t) ||
+            /amara\.org|subtítulos realizados/i.test(t)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function recordProgressiveChunkCheckpoint(index, chunkText) {
+      if (!chunkText || !chunkText.trim()) return;
+      completedChunksMap.set(index, chunkText.trim());
+      const sortedIndices = Array.from(completedChunksMap.keys()).sort((a, b) => a - b);
+      const joinedSoFar = sortedIndices.map(k => completedChunksMap.get(k)).join(' ').trim();
+      const combined = baseTextBeforeSession ? (baseTextBeforeSession + ' ' + joinedSoFar) : joinedSoFar;
+
+      txtResult.value = combined;
+      try { localStorage.setItem(STORAGE_TEXT_BACKUP, combined); } catch (e) {}
+      updateWordCount();
+    }
+
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator) {
+        try { wakeLockSentinel = await navigator.wakeLock.request('screen'); } catch (e) {}
+      }
+    }
+
+    function releaseWakeLock() {
+      if (wakeLockSentinel) {
+        try { wakeLockSentinel.release(); } catch (e) {}
+        wakeLockSentinel = null;
+      }
+    }
+
+    function downsampleBuffer(buffer, inputSampleRate, outputSampleRate) {
+      if (outputSampleRate === inputSampleRate) return buffer;
+      const ratio = inputSampleRate / outputSampleRate;
+      const newLength = Math.round(buffer.length / ratio);
+      const result = new Float32Array(newLength);
+      let offsetResult = 0;
+      let offsetBuffer = 0;
+      while (offsetResult < result.length) {
+        const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
+        let accum = 0, count = 0;
+        for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+          accum += buffer[i];
+          count++;
+        }
+        result[offsetResult] = count > 0 ? accum / count : 0;
+        offsetResult++;
+        offsetBuffer = nextOffsetBuffer;
+      }
+      return result;
+    }
+
+    function encodeWavFromFloat32Chunks(float32Chunks, totalSamples, sampleRate) {
+      const bytesPerSample = 2;
+      const dataLength = totalSamples * bytesPerSample;
+      const buffer = new ArrayBuffer(44 + dataLength);
+      const view = new DataView(buffer);
+
+      function writeAscii(offset, str) {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+      }
+
+      writeAscii(0, 'RIFF');
+      view.setUint32(4, 36 + dataLength, true);
+      writeAscii(8, 'WAVE');
+      writeAscii(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * bytesPerSample, true);
+      view.setUint16(32, bytesPerSample, true);
+      view.setUint16(34, 16, true);
+      writeAscii(36, 'data');
+      view.setUint32(40, dataLength, true);
+
+      let offset = 44;
+      for (let c = 0; c < float32Chunks.length; c++) {
+        const chunk = float32Chunks[c];
+        for (let i = 0; i < chunk.length; i++) {
+          const s = Math.max(-1, Math.min(1, chunk[i]));
+          view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+          offset += 2;
+        }
+      }
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    async function acquireMicrophoneStream() {
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+      } catch (e) {
+        return await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+    }
+
+    async function startRecordingSession(append) {
+      if (isProcessing) return;
+
+      const localKey = getLocalApiKey();
+      if (!localKey && !serverHasApiKey) {
+        openKeyModal();
+        return;
+      }
+
+      // Pre-activar el stream de video PiP dentro del gesto de usuario de iOS
+      ensurePipStreamReady();
+
+      try {
+        appendMode = append;
+        if (!append) {
+          txtResult.value = '';
+          localStorage.removeItem(STORAGE_TEXT_BACKUP);
+          baseTextBeforeSession = '';
+          accumulatedMs = 0;
+          updateWordCount();
+          updateTimerDisplay(0);
+        } else {
+          baseTextBeforeSession = txtResult.value.trim();
+        }
+
+        completedChunksMap.clear();
+        currentPcmSamples = [];
+        currentSamplesCount = 0;
+        currentChunkIndex = 0;
+        maxSessionLevel = 0;
+        currentChunkLevel = 0;
+        activeChunkPromises = [];
+
+        mediaStream = await acquireMicrophoneStream();
+
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioCtx();
+        if (audioContext.state === 'suspended') await audioContext.resume();
+
+        audioContext.onstatechange = () => {
+          if (isRecording && !isPaused && audioContext && (audioContext.state === 'suspended' || audioContext.state === 'interrupted')) {
+            audioContext.resume().catch(() => {});
+          }
+        };
+
+        const inputRate = audioContext.sampleRate;
+        mediaSource = audioContext.createMediaStreamSource(mediaStream);
+        processorNode = audioContext.createScriptProcessor(2048, 1, 1);
+
+        muteGainNode = audioContext.createGain();
+        muteGainNode.gain.value = 0;
+
+        processorNode.onaudioprocess = (event) => {
+          if (!isRecording || isPaused) {
+            currentAudioLevel = 0;
+            return;
+          }
+
+          const inputData = event.inputBuffer.getChannelData(0);
+          let maxPeak = 0;
+          for (let i = 0; i < inputData.length; i += 2) {
+            const abs = Math.abs(inputData[i]);
+            if (abs > maxPeak) maxPeak = abs;
+          }
+          currentAudioLevel = Math.min(1.0, maxPeak * 2.8);
+          if (currentAudioLevel > maxSessionLevel) maxSessionLevel = currentAudioLevel;
+          if (currentAudioLevel > currentChunkLevel) currentChunkLevel = currentAudioLevel;
+
+          const downsampled = downsampleBuffer(inputData, inputRate, TARGET_SAMPLE_RATE);
+          currentPcmSamples.push(downsampled);
+          currentSamplesCount += downsampled.length;
+
+          if (currentSamplesCount >= CHUNK_MAX_SAMPLES) {
+            dispatchCurrentTwoMinuteChunk();
+          }
+        };
+
+        mediaSource.connect(processorNode);
+        processorNode.connect(muteGainNode);
+        muteGainNode.connect(audioContext.destination);
+
+        isRecording = true;
+        isPaused = false;
+        lastResumeTimestamp = Date.now();
+        await requestWakeLock();
+
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(onTimerTick, 150);
+
+        setStatus(
+          append ? 'Siguiendo' : 'Grabando',
+          append ? 'Añadiendo al final de tu texto actual' : 'Corte y autoguardado cada 2 min (< 22 MB)',
+          'rec'
+        );
+        syncButtonsUI();
+      } catch (err) {
+        cleanupAudioResources();
+        setStatus('Sin micrófono', 'Permite el micrófono en Safari', 'err');
+        showIslandToast('⚠️ Permite el acceso al micrófono en iPhone');
+      }
+    }
+
+    function pauseRecordingSession() {
+      if (!isRecording || isPaused) return;
+      isPaused = true;
+      accumulatedMs += Date.now() - lastResumeTimestamp;
+      currentAudioLevel = 0;
+      setStatus('Pausado', 'Toca ▶ para seguir o ■ para transcribir', 'pause');
+      syncButtonsUI();
+    }
+
+    async function resumeRecordingSession() {
+      if (!isRecording || !isPaused) return;
+      if (audioContext && audioContext.state !== 'running') {
+        try { await audioContext.resume(); } catch (e) {}
+      }
+      isPaused = false;
+      lastResumeTimestamp = Date.now();
+      setStatus('Grabando', 'Grabación reanudada sin perder audio', 'rec');
+      syncButtonsUI();
+    }
+
+    function dispatchCurrentTwoMinuteChunk() {
+      if (currentSamplesCount === 0 || currentPcmSamples.length === 0) return;
+
+      const chunkPeakSnapshot = currentChunkLevel;
+      currentChunkLevel = 0;
+
+      const samples = currentPcmSamples;
+      const total = currentSamplesCount;
+      currentPcmSamples = [];
+      currentSamplesCount = 0;
+
+      const chunkIdx = ++currentChunkIndex;
+      if (chunkPeakSnapshot < 0.022) return;
+
+      const wavBlob = encodeWavFromFloat32Chunks(samples, total, TARGET_SAMPLE_RATE);
+      const sizeMb = (wavBlob.size / (1024 * 1024)).toFixed(1);
+
+      setStatus(
+        `Tramo #${chunkIdx + 1}`,
+        `Autoguardando tramo #${chunkIdx} (${sizeMb} MB) en 2º plano...`,
+        'rec'
+      );
+
+      activeChunkPromises.push(sendWavChunkToWhisper(wavBlob, chunkIdx, chunkPeakSnapshot));
+    }
+
+    async function stopRecordingAndTranscribe() {
+      if (!isRecording) return;
+
+      if (!isPaused) accumulatedMs += Date.now() - lastResumeTimestamp;
+
+      isRecording = false;
+      isPaused = false;
+      isProcessing = true;
+      currentAudioLevel = 0;
+
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+
+      releaseWakeLock();
+      syncButtonsUI();
+      setStatus('Transcribiendo', 'Procesando con Groq Whisper Large v3...', 'work');
+
+      try {
+        if (activeChunkPromises.length === 0 && maxSessionLevel < 0.025) {
+          cleanupAudioResources();
+          setStatus('Sin voz', 'No se detectó sonido en el micrófono', 'idle');
+          showIslandToast('No se detectó voz en el micrófono');
+          return;
+        }
+
+        if (currentSamplesCount > TARGET_SAMPLE_RATE / 5) {
+          const finalChunkPeak = currentChunkLevel;
+          const samples = currentPcmSamples;
+          const total = currentSamplesCount;
+          currentPcmSamples = [];
+          currentSamplesCount = 0;
+          currentChunkLevel = 0;
+
+          if (finalChunkPeak >= 0.022) {
+            const chunkIdx = ++currentChunkIndex;
+            const wavBlob = encodeWavFromFloat32Chunks(samples, total, TARGET_SAMPLE_RATE);
+            activeChunkPromises.push(sendWavChunkToWhisper(wavBlob, chunkIdx, finalChunkPeak));
+          }
+        }
+
+        cleanupAudioResources();
+
+        if (activeChunkPromises.length === 0) {
+          setStatus('Muy corto', 'Habla al menos 1 segundo', 'idle');
+          return;
+        }
+
+        const results = await Promise.all(activeChunkPromises);
+        results.sort((a, b) => a.index - b.index);
+
+        const errors = results.filter(r => !r.success).map(r => r.error);
+        const texts = results.filter(r => r.success && r.text.trim()).map(r => r.text.trim());
+        const newTranscript = texts.join(' ').trim();
+
+        if (newTranscript) {
+          txtResult.value = baseTextBeforeSession ? (baseTextBeforeSession + ' ' + newTranscript) : newTranscript;
+          try { localStorage.setItem(STORAGE_TEXT_BACKUP, txtResult.value); } catch (e) {}
+          updateWordCount();
+          txtResult.scrollTop = txtResult.scrollHeight;
+
+          const copiedAuto = await copyTextSilently(txtResult.value);
+          if (copiedAuto) {
+            flashCopyFeedback();
+            setStatus('Copiado', 'Listo para pegar en WhatsApp o Notas', 'done');
+            showIslandToast('✓ Copiado automáticamente al portapapeles');
+          } else {
+            setStatus('Listo para copiar', 'Toca "Copiar" en la píldora o abajo', 'done');
+            showIslandToast('✓ Transcrito: Toca aquí para copiar');
+          }
+        } else if (errors.length > 0) {
+          setStatus('Error', errors[0], 'err');
+          showIslandToast('⚠️ ' + errors[0]);
+        } else {
+          setStatus('Sin voz', 'Habla más cerca del micrófono', 'idle');
+        }
+      } catch (err) {
+        setStatus('Error', err.message || 'Fallo al transcribir', 'err');
+      } finally {
+        isProcessing = false;
+        syncButtonsUI();
+      }
+    }
+
+    async function sendWavChunkToWhisper(wavBlob, index, chunkPeak) {
+      await acquireUploadSlot();
+      try {
+        const localKey = getLocalApiKey();
+        const MAX_ATTEMPTS = 4;
+
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+          try {
+            let res;
+            if (localKey) {
+              const formData = new FormData();
+              formData.append('file', wavBlob, `chunk_${index}.wav`);
+              formData.append('model', 'whisper-large-v3');
+              formData.append('temperature', '0');
+              formData.append('response_format', 'json');
+
+              res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${localKey}` },
+                body: formData,
+                signal: controller.signal
+              });
+            } else {
+              res = await fetch('/api/transcribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'audio/wav' },
+                body: wavBlob,
+                signal: controller.signal
+              });
+            }
+
+            clearTimeout(timeoutId);
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+              const status = res.status;
+              const errMsg = (data.error && (data.error.message || data.error)) || `Error HTTP ${status}`;
+              if (attempt < MAX_ATTEMPTS && (status === 429 || status >= 500 || status === 408)) {
+                const retryAfterSec = parseInt(res.headers.get('retry-after') || '0', 10);
+                const waitMs = retryAfterSec > 0 ? Math.min(15000, retryAfterSec * 1000) : attempt * 1600;
+                await new Promise(r => setTimeout(r, waitMs));
+                continue;
+              }
+              return { index, success: false, error: String(errMsg) };
+            }
+
+            let text = (data && data.text) ? String(data.text) : '';
+            if (isWhisperSilenceHallucination(text, chunkPeak)) {
+              text = '';
+            }
+            if (text.trim()) {
+              recordProgressiveChunkCheckpoint(index, text);
+            }
+            return { index, success: true, text };
+          } catch (err) {
+            clearTimeout(timeoutId);
+            if (attempt >= MAX_ATTEMPTS) {
+              return { index, success: false, error: err.name === 'AbortError' ? 'Tiempo agotado' : (err.message || 'Error de red') };
+            }
+            await new Promise(r => setTimeout(r, attempt * 1400));
+          }
+        }
+        return { index, success: false, error: 'Fallo tras reintentos' };
+      } finally {
+        releaseUploadSlot();
+      }
+    }
+
+    function cleanupAudioResources() {
+      if (processorNode) { try { processorNode.disconnect(); } catch (e) {} processorNode = null; }
+      if (muteGainNode) { try { muteGainNode.disconnect(); } catch (e) {} muteGainNode = null; }
+      if (mediaSource) { try { mediaSource.disconnect(); } catch (e) {} mediaSource = null; }
+      if (mediaStream) { try { mediaStream.getTracks().forEach(t => t.stop()); } catch (e) {} mediaStream = null; }
+      if (audioContext) { try { audioContext.close(); } catch (e) {} audioContext = null; }
+    }
+
+    async function copyTextSilently(text) {
+      if (!text || !text.trim()) return false;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text.trim());
+          return true;
+        }
+      } catch (e) {}
+      return false;
+    }
+
+    async function copyTextWithUserGesture() {
+      const text = txtResult.value.trim();
+      if (!text) {
+        showIslandToast('Graba algo primero para copiar');
+        return;
+      }
+
+      let copied = await copyTextSilently(text);
+      if (!copied) {
+        try {
+          const temp = document.createElement('textarea');
+          temp.value = text;
+          temp.style.position = 'fixed';
+          temp.style.opacity = '0';
+          document.body.appendChild(temp);
+          temp.focus();
+          temp.select();
+          temp.setSelectionRange(0, text.length);
+          copied = document.execCommand('copy');
+          document.body.removeChild(temp);
+        } catch (e) {}
+      }
+
+      if (copied) {
+        flashCopyFeedback();
+        setStatus('Copiado', 'Listo para pegar en WhatsApp', 'done');
+        showIslandToast('✓ Copiado al portapapeles de tu iPhone');
+      }
+    }
+
+    function flashCopyFeedback() {
+      btnMainCopy.textContent = '✓ Copiado al Portapapeles';
+      btnMainCopy.className = 'btn-ios btn-ios-green';
+      btnPillCopy.textContent = '✓';
+      btnPillCopy.className = 'pill-btn pill-btn-green pill-copy-chip';
+
+      setTimeout(() => {
+        btnMainCopy.textContent = 'Copiar al Portapapeles';
+        btnMainCopy.className = 'btn-ios btn-ios-white';
+        btnPillCopy.textContent = 'Copiar';
+        btnPillCopy.className = 'pill-btn pill-btn-dark pill-copy-chip';
+      }, 1800);
+    }
+
+    btnShareIos.addEventListener('click', async () => {
+      const text = txtResult.value.trim();
+      if (!text) {
+        showIslandToast('Aún no hay texto para compartir');
+        return;
+      }
+      if (navigator.share) {
+        try { await navigator.share({ text }); } catch (e) {}
+      } else {
+        await copyTextWithUserGesture();
+      }
+    });
+
+    function handleRecordToggle() {
+      if (isProcessing) return;
+      if (!isRecording) startRecordingSession(false);
+      else stopRecordingAndTranscribe();
+    }
+
+    function handleContinueOrPauseToggle() {
+      if (isProcessing) return;
+      if (!isRecording) startRecordingSession(true);
+      else if (!isPaused) pauseRecordingSession();
+      else resumeRecordingSession();
+    }
+
+    btnMainRecord.addEventListener('click', handleRecordToggle);
+    btnPillRecord.addEventListener('click', handleRecordToggle);
+    btnMainContinue.addEventListener('click', handleContinueOrPauseToggle);
+    btnPillContinue.addEventListener('click', handleContinueOrPauseToggle);
+    btnMainCopy.addEventListener('click', copyTextWithUserGesture);
+    btnPillCopy.addEventListener('click', copyTextWithUserGesture);
+
+    btnClearText.addEventListener('click', () => {
+      txtResult.value = '';
+      localStorage.removeItem(STORAGE_TEXT_BACKUP);
+      accumulatedMs = 0;
+      updateTimerDisplay(0);
+      updateWordCount();
+      setStatus('Listo para grabar', 'Corte automático cada 2 min • Whisper Large v3', 'idle');
+    });
+
+    txtResult.addEventListener('input', () => {
+      localStorage.setItem(STORAGE_TEXT_BACKUP, txtResult.value);
+      updateWordCount();
+    });
+
+    function syncButtonsUI() {
+      if (isProcessing) {
+        dynamicIsland.classList.add('rec-active');
+        btnMainRecord.disabled = true;
+        btnMainContinue.disabled = true;
+        btnPillRecord.disabled = true;
+        btnPillContinue.disabled = true;
+
+        btnMainRecord.textContent = 'Transcribiendo...';
+        btnMainRecord.className = 'btn-ios btn-ios-dark';
+        btnPillRecord.textContent = '…';
+      } else if (isRecording) {
+        dynamicIsland.classList.add('rec-active');
+        btnMainRecord.disabled = false;
+        btnMainContinue.disabled = false;
+        btnPillRecord.disabled = false;
+        btnPillContinue.disabled = false;
+
+        btnMainRecord.textContent = 'Finalizar Grabación';
+        btnMainRecord.className = 'btn-ios btn-ios-red';
+        btnPillRecord.textContent = '■';
+        btnPillRecord.className = 'pill-btn pill-btn-red';
+
+        if (isPaused) {
+          btnMainContinue.textContent = 'Seguir Grabando';
+          btnMainContinue.className = 'btn-ios btn-ios-white';
+          btnPillContinue.textContent = '▶';
+          btnPillContinue.className = 'pill-btn pill-btn-white';
+        } else {
+          btnMainContinue.textContent = 'Pausar';
+          btnMainContinue.className = 'btn-ios btn-ios-dark';
+          btnPillContinue.textContent = '❚❚';
+          btnPillContinue.className = 'pill-btn pill-btn-dark';
+        }
+      } else {
+        dynamicIsland.classList.remove('rec-active');
+        btnMainRecord.disabled = false;
+        btnMainContinue.disabled = false;
+        btnPillRecord.disabled = false;
+        btnPillContinue.disabled = false;
+
+        btnMainRecord.textContent = 'Empezar Grabación';
+        btnMainRecord.className = 'btn-ios btn-ios-white';
+        btnPillRecord.textContent = '●';
+        btnPillRecord.className = 'pill-btn pill-btn-white';
+
+        btnMainContinue.textContent = 'Seguir Grabando';
+        btnMainContinue.className = 'btn-ios btn-ios-dark';
+        btnPillContinue.textContent = '+';
+        btnPillContinue.className = 'pill-btn pill-btn-dark';
+      }
+    }
+
+    function setStatus(title, subtitle, tag) {
+      statusTitleText.textContent = title;
+      statusSubtitle.textContent = subtitle;
+      lblPillState.textContent = title;
+
+      let dotColor = 'var(--ios-green)';
+      if (tag === 'rec' || tag === 'err') dotColor = 'var(--ios-red)';
+      else if (tag === 'pause' || tag === 'work') dotColor = 'var(--ios-amber)';
+
+      pillStatusDot.style.background = dotColor;
+      lblPillState.style.color = (tag === 'idle' || tag === 'done') ? 'var(--text-muted)' : dotColor;
+
+      if (tag === 'rec') pillHalo.classList.add('pulsing');
+      else pillHalo.classList.remove('pulsing');
+    }
+
+    function onTimerTick() {
+      const total = isPaused ? accumulatedMs : (accumulatedMs + (Date.now() - lastResumeTimestamp));
+      updateTimerDisplay(total);
+    }
+
+    function updateTimerDisplay(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      const secs = String(totalSeconds % 60).padStart(2, '0');
+      const formatted = `${mins}:${secs}`;
+      lblMainTimer.textContent = formatted;
+      lblPillTimer.textContent = formatted;
+    }
+
+    function updateWordCount() {
+      const t = txtResult.value.trim();
+      const count = t ? t.split(/\s+/).length : 0;
+      lblWordCount.textContent = `• ${count} palabra${count === 1 ? '' : 's'}`;
+    }
+
+    // Arrastre libre de la Píldora Dynamic Island por la pantalla del iPhone
+    (function enableIslandDrag() {
+      const handle = document.getElementById('pillDragHandle');
+      let dragging = false, startX = 0, startY = 0, initLeft = 0, initTop = 0;
+
+      handle.addEventListener('pointerdown', (e) => {
+        handle.setPointerCapture(e.pointerId);
+        const rect = islandDock.getBoundingClientRect();
+        islandDock.classList.add('floating-free');
+        islandDock.style.transform = 'none';
+        islandDock.style.left = rect.left + 'px';
+        islandDock.style.top = rect.top + 'px';
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initLeft = rect.left;
+        initTop = rect.top;
+      });
+
+      handle.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const maxL = Math.max(6, window.innerWidth - islandDock.offsetWidth - 6);
+        const maxT = Math.max(8, window.innerHeight - 76);
+        islandDock.style.left = Math.max(6, Math.min(maxL, initLeft + (e.clientX - startX))) + 'px';
+        islandDock.style.top = Math.max(8, Math.min(maxT, initTop + (e.clientY - startY))) + 'px';
+      });
+
+      handle.addEventListener('pointerup', () => { dragging = false; });
+      handle.addEventListener('pointercancel', () => { dragging = false; });
+    })();
+
+    // =====================================================
+    // MOTOR PICTURE-IN-PICTURE (PIP) REAL PARA IPHONE SAFARI
+    // Combina Canvas 30fps + Pista de Audio Silenciosa WebAudio
+    // =====================================================
+    const mainCurrent = new Array(38).fill(4);
+    const miniCurrent = new Array(16).fill(4);
+    let phase = 0;
+    let isPipActive = false;
+    let pipStreamInitialized = false;
+
+    function drawFloatingPipCanvas(activeRec, processing) {
+      const ctx = pipCanvas.getContext('2d');
+      const w = pipCanvas.width;
+      const h = pipCanvas.height;
+
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.fillStyle = '#09090d';
+      ctx.strokeStyle = activeRec ? 'rgba(255, 59, 48, 0.65)' : 'rgba(255, 255, 255, 0.18)';
+      ctx.lineWidth = 3;
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(14, 14, w - 28, h - 28, 42);
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.fillRect(14, 14, w - 28, h - 28);
+      }
+
+      const dotX = 62;
+      const dotY = 74;
+      if (activeRec) {
+        const pulseR = 14 + 8 * (0.5 + 0.5 * Math.sin(phase * 1.4));
+        ctx.fillStyle = 'rgba(255, 59, 48, 0.3)';
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, pulseR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = activeRec ? '#ff3b30' : (processing ? '#ff9f0a' : '#30d158');
+      ctx.beginPath();
+      ctx.arc(dotX, dotY, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#f5f5f7';
+      ctx.font = 'bold 34px "SF Mono", Menlo, monospace';
+      ctx.fillText(lblPillTimer.textContent || '00:00', 90, 72);
+
+      ctx.fillStyle = activeRec ? '#ff453a' : (processing ? '#ff9f0a' : '#8e8e93');
+      ctx.font = '600 19px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText((lblPillState.textContent || 'LISTO').toUpperCase(), 90, 100);
+
+      const waveStartX = 290;
+      const waveWidth = w - waveStartX - 44;
+      const count = miniCurrent.length;
+      const step = waveWidth / count;
+      const barW = 8;
+
+      if (processing) ctx.fillStyle = '#ff9f0a';
+      else if (!activeRec) ctx.fillStyle = 'rgba(245, 245, 247, 0.28)';
+      else if (currentAudioLevel < 0.025) ctx.fillStyle = 'rgba(255, 69, 58, 0.85)';
+      else ctx.fillStyle = '#ffffff';
+
+      for (let i = 0; i < count; i++) {
+        const bh = Math.max(8, Math.min(68, miniCurrent[i] * 2.5));
+        const bx = waveStartX + i * step;
+        const by = 74 - bh / 2;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(bx, by, barW, bh, 4);
+        else ctx.rect(bx, by, barW, bh);
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.09)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(42, 132);
+      ctx.lineTo(w - 42, 132);
+      ctx.stroke();
+
+      const currentTranscript = (txtResult.value || '').replace(/\s+/g, ' ').trim();
+      ctx.fillStyle = currentTranscript ? '#30d158' : '#8e8e93';
+      ctx.font = '600 19px -apple-system, BlinkMacSystemFont, sans-serif';
+
+      let bottomLine = 'Toca ❚❚ aquí para transcribir • Toca ↖ para copiar';
+      if (processing) {
+        bottomLine = 'Transcribiendo con Groq Whisper Large v3...';
+      } else if (currentTranscript) {
+        const tail = currentTranscript.length > 48 ? ('…' + currentTranscript.slice(-48)) : currentTranscript;
+        bottomLine = '✓ ' + tail;
+      }
+      ctx.fillText(bottomLine, 44, 172);
+    }
+
+    function ensurePipStreamReady() {
+      if (pipStreamInitialized && pipVideo.srcObject) return true;
+      try {
+        drawFloatingPipCanvas(isRecording && !isPaused, isProcessing);
+        const canvasStream = pipCanvas.captureStream ? pipCanvas.captureStream(30) : null;
+        if (!canvasStream) return false;
+
+        // Añadir pista de audio silenciosa para que iOS Safari habilite PiP y controles en 2º plano
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          const silentCtx = new AudioCtx();
+          const osc = silentCtx.createOscillator();
+          const gain = silentCtx.createGain();
+          gain.gain.value = 0.00001;
+          const dest = silentCtx.createMediaStreamDestination();
+          osc.connect(gain);
+          gain.connect(dest);
+          osc.start();
+          const audioTrack = dest.stream.getAudioTracks()[0];
+          if (audioTrack) canvasStream.addTrack(audioTrack);
+        } catch (e) {}
+
+        pipVideo.srcObject = canvasStream;
+        pipStreamInitialized = true;
+        pipVideo.play().catch(() => {});
+
+        if ('mediaSession' in navigator) {
+          try {
+            navigator.mediaSession.metadata = new MediaMetadata({
+              title: 'Transcriptor iPhone Pro',
+              artist: 'Toca Pausa para transcribir con Whisper v3'
+            });
+            navigator.mediaSession.setActionHandler('pause', () => {
+              if (isRecording) stopRecordingAndTranscribe();
+            });
+            navigator.mediaSession.setActionHandler('play', () => {
+              if (!isRecording && !isProcessing) startRecordingSession(true);
+              else if (isRecording && isPaused) resumeRecordingSession();
+              pipVideo.play().catch(() => {});
+            });
+          } catch (e) {}
+        }
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    window.addEventListener('pointerdown', () => {
+      if (!pipStreamInitialized) ensurePipStreamReady();
+    }, { once: true, passive: true });
+
+    pipVideo.addEventListener('pause', () => {
+      if (isPipActive && isRecording && !isProcessing) {
+        stopRecordingAndTranscribe();
+        setTimeout(() => {
+          if (isPipActive) pipVideo.play().catch(() => {});
+        }, 200);
+      }
+    });
+
+    pipVideo.addEventListener('enterpictureinpicture', () => { isPipActive = true; });
+    pipVideo.addEventListener('leavepictureinpicture', () => { isPipActive = false; });
+    pipVideo.addEventListener('webkitpresentationmodechanged', () => {
+      isPipActive = (pipVideo.webkitPresentationMode === 'picture-in-picture');
+    });
+
+    async function launchPictureInPicturePill() {
+      const ready = ensurePipStreamReady();
+      if (!ready) {
+        tabBtnShortcut.click();
+        showIslandToast('Usa el Atajo Nativo iOS en esta pestaña');
+        return;
+      }
+
+      pipVideo.play().catch(() => {});
+
+      try {
+        if (pipVideo.webkitSupportsPresentationMode && typeof pipVideo.webkitSetPresentationMode === 'function') {
+          const nextMode = pipVideo.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture';
+          pipVideo.webkitSetPresentationMode(nextMode);
+          isPipActive = (nextMode === 'picture-in-picture');
+          if (isPipActive && !isRecording && !isProcessing) {
+            startRecordingSession(Boolean(txtResult.value.trim()));
+          }
+          return;
+        }
+
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+          isPipActive = false;
+          return;
+        }
+
+        if (pipVideo.requestPictureInPicture) {
+          await pipVideo.requestPictureInPicture();
+          isPipActive = true;
+          if (!isRecording && !isProcessing) {
+            startRecordingSession(Boolean(txtResult.value.trim()));
+          }
+          return;
+        }
+
+        tabBtnShortcut.click();
+      } catch (e) {
+        tabBtnShortcut.click();
+      }
+    }
+
+    btnPillPip.addEventListener('click', launchPictureInPicturePill);
+    btnLaunchPipBanner.addEventListener('click', launchPictureInPicturePill);
+
+    // Loop de Ondas Apple Voice Memos a 60 FPS
+    function animateWaveform() {
+      phase += 0.15;
+      const activeRec = isRecording && !isPaused;
+
+      updateBarsArray(mainCurrent, 38, activeRec, isProcessing, 60);
+      updateBarsArray(miniCurrent, 16, activeRec, isProcessing, 22);
+
+      drawAppleBars(mainCanvas, mainCurrent, activeRec, isProcessing);
+      drawAppleBars(miniCanvas, miniCurrent, activeRec, isProcessing);
+
+      if (isPipActive || pipStreamInitialized) {
+        drawFloatingPipCanvas(activeRec, isProcessing);
+      }
+
+      currentAudioLevel *= 0.88;
+      requestAnimationFrame(animateWaveform);
+    }
+
+    function updateBarsArray(arr, count, activeRec, processing, maxH) {
+      for (let i = 0; i < count; i++) {
+        const centerDist = Math.abs(i - (count - 1) / 2) / (count / 2);
+        const envelope = Math.max(0.18, 1.0 - centerDist * 0.76);
+        let target = 4;
+
+        if (processing) {
+          const shimmer = 0.5 + 0.5 * Math.sin(phase * 1.8 - i * 0.45);
+          target = 4 + maxH * 0.55 * shimmer * envelope;
+        } else if (!activeRec) {
+          target = 3.5 + Math.sin(phase * 0.5 + i * 0.35) * 1.1;
+        } else if (currentAudioLevel < 0.025) {
+          target = 4.8 + Math.sin(phase * 1.1 + i * 0.45) * 2.4 * envelope;
+        } else {
+          const wave = 0.62 + 0.38 * Math.sin(phase * 2.1 + i * 0.58);
+          const jitter = 0.76 + Math.random() * 0.48;
+          const norm = Math.min(1.0, currentAudioLevel * envelope * wave * jitter * 1.55);
+          target = Math.max(5, norm * maxH);
+        }
+
+        arr[i] += (target - arr[i]) * 0.34;
+      }
+    }
+
+    function drawAppleBars(canvas, arr, activeRec, processing) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+      }
+
+      const ctx = canvas.getContext('2d');
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, rect.width, rect.height);
+
+      const count = arr.length;
+      const totalSpace = rect.width - 10;
+      const step = totalSpace / count;
+      const barW = Math.max(2.4, Math.min(4.2, step * 0.5));
+
+      if (processing) ctx.fillStyle = 'rgba(255, 159, 10, 0.88)';
+      else if (!activeRec) ctx.fillStyle = 'rgba(245, 245, 247, 0.25)';
+      else if (currentAudioLevel < 0.025) ctx.fillStyle = 'rgba(255, 69, 58, 0.75)';
+      else ctx.fillStyle = '#f5f5f7';
+
+      for (let i = 0; i < count; i++) {
+        const bh = Math.max(3.5, Math.min(rect.height - 4, arr[i]));
+        const x = 5 + i * step + (step - barW) / 2;
+        const y = (rect.height - bh) / 2;
+
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, barW, bh, barW / 2);
+        else ctx.rect(x, y, barW, bh);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    (function init() {
+      const savedText = localStorage.getItem(STORAGE_TEXT_BACKUP);
+      if (savedText) {
+        txtResult.value = savedText;
+        updateWordCount();
+      }
+      checkApiConnectionStatus();
+      requestAnimationFrame(animateWaveform);
+    })();
+  </script>
+</body>
+</html>
